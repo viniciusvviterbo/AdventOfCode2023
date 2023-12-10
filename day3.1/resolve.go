@@ -41,30 +41,39 @@ func findNumbersInLine(line string, lineIdx int) []NumberPosition {
 
 	tmpStart, tmpEnd := -1, -1
 	var tmpNumber string
+
+	saveNumber := func() {
+		newNumber := NumberPosition{
+			line:     lineIdx,
+			startCol: tmpStart,
+			endCol:   tmpEnd,
+		}
+		numbersFound = append(numbersFound, newNumber)
+		tmpStart = -1
+		tmpEnd = -1
+	}
+
 	for idx, char := range line {
-		if !unicode.IsDigit(char) && tmpStart != -1 && tmpEnd != -1 { // this is the end of a number
-			newNumber := NumberPosition{
-				line:     lineIdx,
-				startCol: tmpStart,
-				endCol:   tmpEnd,
+		runeIsDigit := unicode.IsDigit(char)
+
+		if runeIsDigit {
+			if tmpStart != -1 { // this char is a continuation of a number
+				tmpNumber = fmt.Sprintf("%s%c", tmpNumber, char)
+				tmpEnd = idx
+			} else { // this char is the beggining of a number
+				tmpStart = idx
+				tmpNumber = fmt.Sprintf("%s%c", tmpNumber, char)
+				tmpEnd = idx
 			}
-			numbersFound = append(numbersFound, newNumber)
-			tmpStart = -1
-			tmpEnd = -1
-		}
-
-		if !unicode.IsDigit(char) && tmpStart == -1 { // hasnt found a number yet
+		} else if tmpStart == -1 { // hasnt found a number yet
 			continue
+		} else if tmpEnd != -1 { // this is the end of a number
+			saveNumber()
 		}
+	}
 
-		if tmpStart != -1 { // this char is a continuation of a number
-			tmpNumber = fmt.Sprintf("%s%c", tmpNumber, char)
-			tmpEnd = idx
-		} else { // this char is the beggining of a number
-			tmpStart = idx
-			tmpNumber = fmt.Sprintf("%s%c", tmpNumber, char)
-			tmpEnd = idx
-		}
+	if unicode.IsDigit(rune(line[len(line)-1])) { // the last digit of this line is part of a number
+		saveNumber()
 	}
 
 	return numbersFound
@@ -80,7 +89,6 @@ func findSymbolsInLine(line string, lineIdx int) []SymbolPosition {
 				col:  idx,
 			}
 			symbolsFound = append(symbolsFound, newSymbol)
-
 		}
 	}
 
@@ -134,20 +142,19 @@ func main() {
 
 	validNumberPositions := getValidNumberPositions(engineMap)
 
-  var partNumberSum int
+	var partNumberSum int
 
 	for _, numPos := range validNumberPositions {
 		newNumber := engineMap[numPos.line][numPos.startCol : numPos.endCol+1]
-    number, err := strconv.Atoi(newNumber)
-    if err != nil {
-      panic("Not able to convert number")
-    }
+		number, err := strconv.Atoi(newNumber)
+		if err != nil {
+			panic("Not able to convert number")
+		}
 
-  fmt.Println(number)
-    partNumberSum += number
+		partNumberSum += number
 	}
 
-  fmt.Println(partNumberSum)
+	fmt.Println(partNumberSum)
 	// Check for scanner errors
 	if err := johnLennon.Err(); err != nil {
 		fmt.Println("Error reading standard input:", err)
